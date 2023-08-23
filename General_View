@@ -1,0 +1,732 @@
+General Overview on the Dataset
+
+1. # Of Booking by Hotel
+--> The are two differents hotels in the dataset. Both are in Portugal. One is at the city, and the second is in the outside. "City Hotel"
+has 2/3 of the total Bookings, and the "Resort" books 1/3.
+
+SQL CODE:
+------------------------------------------
+SELECT hotel, COUNT(*) AS Total_Bookings, 
+	ROUND(COUNT(*) / (SELECT COUNT(*) FROM hotel_bookings.hotel_bookings), 2) AS Share_Market
+FROM  hotel_bookings.hotel_bookings
+GROUP BY hotel
+ORDER BY COUNT(*) DESC;
+
+RESULTS:
+------------------------------------------
+hotel	        Total_Bookings	Share_Market
+City Hotel	      79326	          0.66
+Resort Hotel	    40060	          0.34
+
+2. # Of Cancelled Booking by Hotel.
+--> Distribution of the canceled booking between the 2 hotels. Theres is a general cancelation ratio of 37% on the bookings made. 
+"City Hotel" has a higher cancellation ratio than "Resort Hotel". 
+
+SQL CODE:
+------------------------------------------
+SELECT hotel, COUNT(*) AS Booking, SUM(is_canceled) AS Cancelations, (SUM(is_canceled)/COUNT(*)) AS Cancelation_Ratio
+FROM hotel_bookings.hotel_bookings
+GROUP BY hotel WITH ROLLUP
+ORDER BY Booking;
+
+RESULTS:
+------------------------------------------
+hotel	            Booking	  Cancelations	Cancelation_Ratio
+Resort Hotel	      40060	         11122	          0.2776
+City Hotel	        79326	         33098	          0.4172
+NULL	             119386	         44220	          0.3704
+
+3. Lead Time for the first 30 days.
+--> Almost 30% of all bookings are settled for guests to arrive at the hotel in less than 30 days. Now, I didn't put it here, but the same
+SQL code where the condition of 30 days is changed to 90 days (3 months), then 57% of all bookings are settled for guests to arrive at the
+hotel in less than 3 months.
+
+SQL CODE:
+------------------------------------------
+SELECT lead_time, COUNT(*) AS Ocurrences, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Share_of_Total,
+SUM(COUNT(*)) OVER(ORDER BY COUNT(*) DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+AS Running_Total, SUM(COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings))
+OVER(ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Running_Share
+FROM hotel_bookings.hotel_bookings
+WHERE lead_time < 30
+GROUP BY lead_time;
+
+RESULTS:
+------------------------------------------
+lead_time	  Ocurrences	  Share_of_Total	  Running_Total	  Running_Share
+0	               6345	           0.0531	            6345	        0.0531
+1	               3458	           0.0290	            9803	        0.0821
+2	               2068	           0.0173	           11871	        0.0994
+3	               1816	           0.0152	           13687	        0.1146
+4	               1715	           0.0144	           15402	        0.1290
+5	               1565	           0.0131	           16967	        0.1421
+6	               1445	           0.0121	           18412	        0.1542
+7	               1331	           0.0111	           19743	        0.1654
+8	               1137	           0.0095	           20880	        0.1749
+12	             1079	           0.0090	           21959	        0.1839
+11	             1055	           0.0088	           23014	        0.1928
+9	                992	           0.0083	           24006	        0.2011
+10	              976	           0.0082	           24982	        0.2093
+14	              965	           0.0081	           25947	        0.2173
+16	              942	           0.0079	           26889	        0.2252
+17	              881	           0.0074	           27770	        0.2326
+15	              839	           0.0070	           28609	        0.2396
+19	              839	           0.0070	           29448	        0.2467
+18	              826	           0.0069	           30274	        0.2536
+13	              821	           0.0069	           31095	        0.2605
+28	              820	           0.0069	           31915	        0.2673
+20	              750	           0.0063	           32665	        0.2736
+29	              712	           0.0060	           33377	        0.2796
+22	              707	           0.0059	           34084	        0.2855
+21	              678	           0.0057	           34762	        0.2912
+26	              671	           0.0056	           35433	        0.2968
+24	              665	           0.0056	           36098	        0.3024
+25	              653	           0.0055	           36751	        0.3078
+27	              649	           0.0054	           37400	        0.3133
+23	              643	           0.0054	           38043	        0.3187
+
+4. Lead Time Distribution in 3 equal tranhces.
+--> I perform a distribution of the Lead Time in 3 equal-size tranches. From the minimum 0 days up to the oultier of 737 days, divided in
+3 tranches that holds exact number of different days. And, under this frame, 3/4 of all bookings are made to arrive at the hotel in
+less than 6 months. And 95% of all bookings are settled for guests to arrive in less than a year.
+
+SQL CODE:
+------------------------------------------
+WITH lead_time_dist AS (SELECT lead_time, COUNT(*) AS Guests
+						FROM hotel_bookings.hotel_bookings
+                        GROUP BY lead_time),
+	Thirds AS (SELECT lead_time, Guests, NTILE(3) OVER (ORDER BY lead_time) AS Third
+			   FROM lead_time_dist)
+SELECT Third, MIN(lead_time) AS Min_Day, MAX(lead_time) AS Max_Day, SUM(Guests) AS Guest_Count, 
+SUM(Guests)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS _Share_Guests  
+FROM Thirds
+GROUP BY Third
+ORDER BY Third;
+
+RESULTS:
+------------------------------------------
+Third	  Min_Day	  Max_Day	  Guest_Count	  _Share_Guests
+1	          0	      159	        89357	          0.7485
+2	        160	      319	        24044	          0.2014
+3	        320	      737	         5985	          0.0501
+
+5. Performance on Booking over time.
+--> The quantity of booking have been increasing since the year 2015 through the year 2017. There's a veridic increase on this matter. 
+Althoguh, I can't compare it month by month because there's insufficient data to perform a real comparison (for example, the most booked
+month on 2016 is October, but i have no further data beyond August 2017), there's definitively a rising trend on booking through years, 
+because every month in 2017 had a higher demand over the same month in 2016 and in 2015.
+
+SQL CODE:
+------------------------------------------
+SELECT arrival_date_year, arrival_date_month, COUNT(*) AS Total_Guests
+FROM hotel_bookings.hotel_bookings
+GROUP BY arrival_date_year, arrival_date_month
+ORDER BY COUNT(*) DESC;
+
+RESULTS:
+------------------------------------------
+arrival_date_year	arrival_date_month	Total_Guests
+      2017	                 May	          6313
+      2016	             October	          6203
+      2017	               April	          5661
+      2017	                June	          5647
+      2016	                 May	          5478
+      2016	               April	          5428
+      2016	           September	          5394
+      2017	                July	          5313
+      2016	                June	          5292
+      2015	           September	          5114
+      2016	              August	          5063
+      2017	               March	          4970
+      2015	             October	          4957
+      2017	              August	          4925
+      2016	               March	          4824
+      2016	                July	          4572
+      2016	            November	          4454
+      2017	            February	          4177
+      2016	            February	          3891
+      2015	              August	          3885
+      2016	            December	          3860
+      2017	             January	          3681
+      2015	            December	          2920
+      2015	                July	          2776
+      2015	            November	          2340
+      2016	             January	          2248
+
+6. # of Nights Staying.
+--> 1/4 of all bookings demands 2 or 3 nights. 95% of all bookings demands staying 7 nights or less.  
+And, 99.5% of all bookings demands lies within or less than 2 weeks.
+
+SQL:
+------------------------------------------
+SELECT (stays_in_weekend_nights + stays_in_week_nights) AS night_stays, COUNT(*) AS tot_count,
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Share_of_Total,
+SUM(COUNT(*)) OVER(ORDER BY COUNT(*) DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+AS Running_Total, SUM(COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings))
+OVER(ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Running_Share
+FROM hotel_bookings.hotel_bookings
+GROUP BY night_stays
+ORDER BY COUNT(*) DESC
+LIMIT 14;
+
+RESULTS:
+------------------------------------------
+night_stays	tot_count	Share_of_Total	Running_Total	Running_Share
+    2	        27641	      0.2315	        27641	       0.2315
+    3	        27076	      0.2268	        54717	       0.4583
+    1	        21019	      0.1761	        75736	       0.6344
+    4	        17383	      0.1456	        93119	       0.7800
+    7	         8654	      0.0725	       101773	       0.8525
+    5	         7784	      0.0652	       109557	       0.9177
+    6	         3857	      0.0323	       113414	       0.9500
+    8	         1161	      0.0097	       114575	       0.9597
+    10	       1139	      0.0095	       115714	       0.9692
+    14	        916	      0.0077	       116630	       0.9769
+    9	          841	      0.0070	       117471	       0.9840
+    0	          715	      0.0060	       118186	       0.9899
+    11	        396	      0.0033	       118582	       0.9933
+    12	        223	      0.0019	       118805	       0.9951
+
+7. Is there a real preference on Booking for weekend nights rather than week nights?
+--> To answer this question, I called "Percent_Mirror" as the benchmark to evaluate if there's a preference or not. The Percent_Mirror is a
+simple division of 2/7 which represents a totally neutral share of 2 days out of a week. If theres an equal booking distribution of nights 
+over the week, then the share of the weekend should be very close to the benchmark of 28.57%
+In fact, weekend nights are slightly lower than the benchmark of 28.57%. Which, it confirms that, when booking, theres no preference for 
+staying in weekend nights over the week days or viceversa.
+
+SQL:
+------------------------------------------
+SELECT hotel, tot_weekend_night, tot_week_nights, (2/7) AS Percent_Mirror, 
+(tot_weekend_night/(tot_weekend_night+tot_week_nights)) AS Real_Percent
+FROM (SELECT hotel, SUM(stays_in_weekend_nights) AS tot_weekend_night, 
+			SUM(stays_in_week_nights) AS tot_week_nights
+			FROM hotel_bookings.hotel_bookings
+			WHERE stays_in_weekend_nights > 0 OR stays_in_week_nights > 0
+            GROUP BY hotel) AS t1
+GROUP BY hotel;
+
+RESULTS:
+------------------------------------------
+hotel	          tot_weekend_night	  tot_week_nights	  Percent_Mirror	  Real_Percent
+Resort Hotel	        47664	             125337	          0.2857	         0.2755
+City Hotel	          63079	             173165	          0.2857	         0.2670
+
+8. # of Adults in booking.
+--> 75% of the bookings is being setled for just 2 adults. Furthermore, 99.5% of all bookings are for less than 4 adults.
+
+SQL:
+------------------------------------------
+SELECT adults, COUNT(*) AS n_bookings, COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS _Share_,
+SUM(City) AS City_Hotel, SUM(Resort) AS Resort_Hotel 
+FROM(SELECT adults, (CASE WHEN hotel ="City Hotel" THEN 1 ELSE 0 END) AS city, 
+	(CASE WHEN hotel ="Resort Hotel" THEN 1 ELSE 0 END) AS Resort
+	FROM hotel_bookings.hotel_bookings) AS t1
+GROUP BY adults ORDER BY adults;
+
+RESULTS:
+------------------------------------------
+adults	  n_bookings	  _Share_	  City_Hotel	  Resort_Hotel
+0	            403	      0.0034	      390	            13
+1	          23027	      0.1929	    15879	          7148
+2	          89677	      0.7512	    58252	         31425
+3	           6201	      0.0519	     4774	          1427
+4	             62	      0.0005	       31	            31
+5	              2	      0.0000	        0	             2
+6	              1	      0.0000	        0  	           1
+10	            1	      0.0000	        0	             1
+20	            2	      0.0000	        0	             2
+26	            5	      0.0000	        0	             5
+27	            2	      0.0000	        0	             2
+40	            1	      0.0000	        0            	 1
+50	            1	      0.0000	        0	             1
+55	            1	      0.0000	        0	             1
+
+9. # of Children in Booking
+--> Almost 92% of all booking won't bring children. This would lead to think that these hotels are not made for family gathering but 
+mainly for adults. But that could be misleading, since most of the guests comes from Europe and most of them don't have children.
+
+SQL:
+------------------------------------------
+SELECT children, COUNT(*) AS n_bookings, SUM(City) AS City_Hotel, SUM(Resort) AS Resort_Hotel 
+FROM(SELECT children, (CASE WHEN hotel ="City Hotel" THEN 1 ELSE 0 END) AS city, 
+	(CASE WHEN hotel ="Resort Hotel" THEN 1 ELSE 0 END) AS Resort
+	FROM hotel_bookings.hotel_bookings) AS t1
+GROUP BY children ORDER BY children;
+
+RESULTS:
+------------------------------------------
+children	n_bookings	City_Hotel	Resort_Hotel
+0	          110796	      74220	        36576
+1	            4861	       3023	         1838
+2	            3652	       2024	         1628
+3	              76	         59	           17
+10	             1	          0	            1
+
+10. # of Babies in Booking
+--> 99% of all booking won't bring babies. Also, this fact could reinforce the idea that these hotels are not marketed for family 
+gathering.
+
+SQL:
+------------------------------------------
+SELECT babies, COUNT(*) AS n_bookings, SUM(City) AS City_Hotel, SUM(Resort) AS Resort_Hotel 
+FROM(SELECT babies, (CASE WHEN hotel ="City Hotel" THEN 1 ELSE 0 END) AS city, 
+	(CASE WHEN hotel ="Resort Hotel" THEN 1 ELSE 0 END) AS Resort
+	FROM hotel_bookings.hotel_bookings) AS t1
+GROUP BY babies ORDER BY babies;
+
+RESULTS:
+------------------------------------------
+babies	n_bookings	City_Hotel	Resort_Hotel
+0	          118469	     78957	       39512
+1	             900	       361	         539
+2	              15	         6	           9
+9	               1	         1	           0
+10	             1	         1	           0
+
+11. Counting Meals
+--> 77% of Bookings demands just BB meal, that's only "Bed & Breakfast" meal, and the option that follows is HB which is "Half Board" and
+it delivers Breakfast with a second meal, usually Dinner. This second option represents 12% of the Booking Meal demands. This woul lead to 
+think that guests uses the hotel just for sleeping and will use most of their time exploring the city or it surroundings at the resort.
+
+SQL:
+------------------------------------------
+SELECT meal, COUNT(*) AS count_meal, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Meal_Share
+FROM  hotel_bookings.hotel_bookings
+GROUP BY meal
+ORDER BY count_meal DESC;
+
+RESULTS:
+------------------------------------------
+meal	    count_meal	Meal_Share
+BB	          92306	    0.7732
+HB	          14463	    0.1211
+SC	          10650	    0.0892
+Undefined	     1169	    0.0098
+FB	            798	    0.0067
+
+12. Country of Origin
+--> 40% of guests comes from Portugal. Most of the other guests comes from other countries in Europe. Independently of Portugal, the 
+distribution of guests across different countries is pretty much balanced and well distributed.
+
+SQL:
+------------------------------------------
+SELECT country, COUNT(*) AS Total_Bookings, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Book_Share,
+SUM(COUNT(*)) OVER(ORDER BY COUNT(*) DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+AS Running_Total,
+SUM(COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings)) 
+OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Running_Share
+FROM hotel_bookings.hotel_bookings
+GROUP BY country
+HAVING Book_Share > 0.01
+ORDER BY Total_Bookings DESC;
+
+RESULTS:
+------------------------------------------
+country	Total_Bookings	Book_Share	Running_Total	Running_Share
+PRT	            48586	     0.4070	         48586	      0.4070
+GBR	            12129	     0.1016	         60715	      0.5086
+FRA	            10415	     0.0872	         71130	      0.5958
+ESP	             8568	     0.0718	         79698	      0.6676
+DEU	             7287	     0.0610	         86985	      0.7286
+ITA	             3766      0.0315	         90751	      0.7601
+IRL	             3375	     0.0283	         94126	      0.7884
+BEL	             2342	     0.0196	         96468	      0.8080
+BRA	             2224	     0.0186	         98692	      0.8267
+NLD	             2104	     0.0176	        100796	      0.8443
+USA	             2097	     0.0176	        102893	      0.8619
+CHE	             1730	     0.0145	        104623	      0.8763
+CN	             1279	     0.0107	        105902	      0.8871
+AUT	             1263	     0.0106	        107165	      0.8976
+
+13. Market Segment
+--> Most people reserved the service through online Travel Agent or it's physical office with a booking participation share of 67%, 
+but 35% of all this booking through TA ends up being canceled. In contrast, people who book directly to the hotel has a participation 
+share of 10.5% but the ratio of cancelled booking is less than half with a 15% ratio. Other important market segment is "Groups" with 
+a participation share of 61%. The segment of "Groups" refers to people who is travelling within a special tour, organisations, 
+religious groups, or other. This segment gives a higher canceled ratio of 61%. 
+
+SQL:
+------------------------------------------
+SELECT market_segment, Tot_Count, Tot_Count/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Market_Share,
+	   Tot_Canceled, Tot_Canceled/Tot_Count AS Cancel_Segment, Tot_Count-Tot_Canceled AS Effective_Booking,
+       Guest_Return
+FROM(SELECT market_segment, COUNT(*) AS Tot_Count, 
+	SUM(CASE WHEN is_canceled = 1 THEN 1 ELSE 0 END) AS Tot_Canceled,
+	SUM(CASE WHEN is_repeated_guest = 1 THEN 1 ELSE 0 END) AS Guest_Return 
+	FROM hotel_bookings.hotel_bookings
+	GROUP BY market_segment
+	ORDER BY Tot_Count DESC) AS t1
+GROUP BY market_segment
+ORDER BY Tot_Count DESC;
+
+RESULTS:
+------------------------------------------
+market_segment	Tot_Count	  Market_Share	  Tot_Canceled	  Cancel_Segment	  Effective_Booking	  Guest_Return
+Online TA	        56476	        0.4731	        20738	          0.3672	            35738	            597
+Offline TA/TO	    24219	        0.2029	         8311	          0.3432	            15908	            379
+Groups	          19811	        0.1659	        12097	          0.6106	             7714	            270
+Direct	          12605	        0.1056	         1933	          0.1534	            10672	            796
+Corporate	         5295	        0.0444	          992	          0.1873	             4303	           1474
+Complementary	      743	        0.0062	           97	          0.1306	              646	            230
+Aviation	          237	        0.0020	           52	          0.2194	              185	             64
+
+14. Distribution Channel Analysis
+--> The Distribution Channel of "Travel Agent OR Tourist Operator" is the main channel with a 82% of participation. Nevertheless, it also
+has the most higher Cancel ratio. More than 1/3 of all bookings made through TA/TO end up being cancelled. In contrast, "Direct" booking
+has the lower ratio of Cancelled Booking at 1/6.
+
+SQL:
+------------------------------------------
+SELECT distribution_channel, Tot_Count, Tot_Count/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS Dist_Share,
+	   Tot_Canceled, Tot_Canceled/Tot_Count AS Cancel_Segment, Tot_Count-Tot_Canceled AS Effective_Booking,
+       Guest_Return
+FROM(SELECT distribution_channel, COUNT(*) AS Tot_Count, 
+	SUM(CASE WHEN is_canceled = 1 THEN 1 ELSE 0 END) AS Tot_Canceled,
+	SUM(CASE WHEN is_repeated_guest = 1 THEN 1 ELSE 0 END) AS Guest_Return 
+	FROM hotel_bookings.hotel_bookings
+	GROUP BY distribution_channel
+	ORDER BY Tot_Count DESC) AS t1
+GROUP BY distribution_channel
+ORDER BY Tot_Count DESC;
+
+RESULTS:
+------------------------------------------
+distribution_channel	  Tot_Count	  Dist_Share	  Tot_Canceled	  Cancel_Segment	  Effective_Booking	  Guest_Return
+TA/TO	                    97870	      0.8198	        40152	          0.4103	            57718	            1298
+Direct	                  14645	      0.1227	         2557	          0.1746	            12088	             937
+Corporate	                 6677	      0.0559	         1474	          0.2208	             5203	            1572
+GDS	                        193	      0.0016	           37	          0.1917	              156	               3
+Undefined	                    1	      0.0000	            0	          0.0000	                1	               0
+
+15. Distribution of Booking Changes
+--> 85% of all booking dont ask for changes. Guests who asks for 1 change represents 10% of all bookings.
+
+SQL:
+------------------------------------------
+SELECT booking_changes, COUNT(*) AS Tot_Count, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS count_share
+FROM hotel_bookings.hotel_bookings
+GROUP BY booking_changes
+ORDER BY Tot_Count DESC
+LIMIT 5;
+
+RESULTS:
+------------------------------------------
+booking_changes	  Tot_Count	  count_share
+0	                  101310	    0.8486
+1	                   12701	    0.1064
+2	                    3805	    0.0319
+3	                     927	    0.0078
+4	                     376	    0.0031
+
+16. Deposit Type Part 1
+--> 86% of all booking didn't had deposit on advanced. The Direct Distribution Channel had the highest ratio of non-deposit bookings with
+96.6% of all Direct Booking.
+
+SQL:
+------------------------------------------
+SELECT deposit_type, COUNT(*) AS Tot_Count, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS d_share, 
+SUM(TA_TO)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE distribution_channel = "TA/TO") AS TA_TO,
+SUM(Direct)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE distribution_channel = "Direct") AS Direct,
+SUM(Corporate)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE distribution_channel = "Corporate") AS Corporate,
+SUM(GDS)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE distribution_channel = "GDS") AS GDS
+FROM (SELECT deposit_type, (CASE WHEN distribution_channel = "TA/TO" THEN 1 ELSE 0 END) AS TA_TO,
+							(CASE WHEN distribution_channel = "Direct" THEN 1 ELSE 0 END) AS Direct,
+                            (CASE WHEN distribution_channel = "Corporate" THEN 1 ELSE 0 END) AS Corporate,
+                            (CASE WHEN distribution_channel = "GDS" THEN 1 ELSE 0 END) AS GDS
+	FROM hotel_bookings.hotel_bookings) AS t1
+GROUP BY deposit_type
+ORDER BY Tot_Count DESC;
+
+RESULTS:
+------------------------------------------
+deposit_type	  Tot_Count	    d_share	    TA_TO	    Direct	  Corporate	    GDS
+No Deposit	      104637	     0.8765	    0.8599	  0.9661	    0.9188	  1.0000
+Non Refund	       14587	     0.1222	    0.1395	  0.0272	    0.0806	  0.0000
+Refundable	         162	     0.0014	    0.0006	  0.0067	    0.0006	  0.0000
+
+17. Deposit Type Part 2
+--> Non-Refund Deposit_type Booking had 99% of all bookings canceled. "Non-Refund" is a deposit made in advanced but with the partial 
+value of the hotel service. 
+
+SQL:
+------------------------------------------
+SELECT deposit_type, COUNT(*) AS Tot_booking, SUM(is_canceled) AS Canceled_Books, 
+		SUM(prev_cancel) AS Previous_Cancel
+FROM (SELECT deposit_type, is_canceled, (CASE WHEN previous_cancellations > 0 THEN 1 ELSE 0 END) AS prev_cancel
+     FROM hotel_bookings.hotel_bookings) AS t1
+GROUP BY deposit_type
+ORDER BY Tot_booking DESC;
+
+RESULTS:
+------------------------------------------
+deposit_type	  Tot_booking	    Canceled_Books	  Previous_Cancel
+No Deposit	      104637	          29690	              2838
+Non Refund	       14587	          14494	              3646
+Refundable	         162	             36	                 0
+
+18. What percentage of repeated guests comes from which countries.
+--> 6.7% of the booking made in Portugal (Portugal represents 40.7% of all booking made) are repeated_guests. All other countries has
+much lower ratio of repeated_guests.
+
+SQL:
+------------------------------------------
+SELECT country, COUNT(*) tot_book, SUM(is_repeated_guest) AS tot_rep_guests, 
+		SUM(is_repeated_guest)/COUNT(*) AS share_rep_guest_country
+FROM hotel_bookings.hotel_bookings
+GROUP BY country
+HAVING COUNT(*) > 1000
+ORDER BY share_rep_guest_country DESC
+LIMIT 5; 
+
+RESULTS:
+------------------------------------------
+country	 tot_book	 tot_rep_guests	 share_rep_guest_country
+PRT	        48586          	3250	          0.0669
+ITA	         3766	            40	          0.0106
+ESP	         8568	            90	          0.0105
+SWE	         1024	            10	          0.0098
+NLD	         2104	            20	          0.0095
+
+19. Previuos Cancellation on Not-Canceled-Booking.
+--> Almost all of No-Canceled-Booking haven't get canceled before.
+
+SQL:
+------------------------------------------
+SELECT previous_cancellations, COUNT(*) AS tot_count
+FROM hotel_bookings.hotel_bookings
+WHERE is_canceled = 0
+GROUP BY previous_cancellations
+ORDER BY tot_count DESC;
+
+RESULTS:
+------------------------------------------
+previous_cancellations	tot_count
+0	                        74624
+1	                          337
+2	                           78
+3	                           45
+11	                         25
+4	                           24
+5	                           17
+6	                           15
+13	                          1
+
+20. Reserved Room Type
+--> 70% of all bookings choose room type A, and 17% choosed room type D. 
+
+SQL:
+------------------------------------------
+SELECT reserved_room_type, COUNT(*) AS Total, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE is_canceled=0) AS Share_of_Total
+FROM hotel_bookings.hotel_bookings
+WHERE is_canceled=0
+GROUP BY reserved_room_type
+ORDER BY Total DESC;
+
+RESULTS:
+------------------------------------------
+reserved_room_type	  Total	  Share_of_Total
+A	                    52364	      0.6966
+D	                    13099	      0.1743
+E	                     4621	      0.0615
+F	                     2017	      0.0268
+G	                     1331	      0.0177
+B	                      750	      0.0100
+C	                      624	      0.0083
+H	                      356      	0.0047
+L	                        4	      0.0001
+
+21. Reserved vs Assigned Room
+--> Hotel Services had to change the room reserved on 1 out of 4 of all NOT-Canceled-Bookings. This could signal that demand for rooms
+surpasses the offer. 
+
+SQL:
+------------------------------------------
+SELECT SUM(room_ok) AS as_reserved_as_assigned, SUM(room_dif) AS diff_room_assigned,
+SUM(room_dif)/SUM(room_ok) AS diff_room_share
+FROM (SELECT reserved_room_type, assigned_room_type, is_canceled,
+			 (CASE WHEN reserved_room_type = assigned_room_type THEN 1 ELSE 0 END) AS room_ok,
+			 (CASE WHEN reserved_room_type <> assigned_room_type THEN 1 ELSE 0 END) AS room_dif
+			 FROM hotel_bookings.hotel_bookings) AS t1
+WHERE is_canceled = 0;
+
+RESULTS:
+------------------------------------------
+as_reserved_as_assigned	    diff_room_assigned	    diff_room_share
+        61051	                    14115	                 0.2312
+
+22. # of total Agents
+--> There is a total of 333 different agents that work with the hotels.
+
+SQL:
+------------------------------------------
+SELECT COUNT(DISTINCT agent) AS Total_Number_Of_Agents
+FROM hotel_bookings.hotel_bookings;
+
+RESULTS:
+------------------------------------------
+Total_Number_Of_Agents
+333
+
+23. Companies  
+--> Top companies that booked more than 200 times. There are 5 of them.
+
+SQL:
+------------------------------------------
+SELECT company, COUNT(*) AS n_occurences
+FROM hotel_bookings.hotel_bookings
+WHERE company IS NOT NULL
+GROUP BY company
+HAVING COUNT(*)>200
+ORDER BY n_occurences DESC;
+
+RESULTS:
+------------------------------------------
+company	  n_occurences
+40	          927
+223	          784
+67	          267
+45	          250
+153	          215
+
+24. Days_Waiting
+--> 96% of all bookings, canceled or not canceled, confirms the reservation in less than a day.
+
+SQL:
+------------------------------------------
+SELECT days_in_waiting_list, COUNT(*) AS tot_count
+FROM hotel_bookings.hotel_bookings
+GROUP BY days_in_waiting_list
+ORDER BY days_in_waiting_list
+LIMIT 7;
+
+RESULTS:
+------------------------------------------
+days_in_waiting_list	  tot_count
+0	                        115688
+1	                            12
+2	                             5
+3	                            59
+4	                            25
+5	                             8
+6	                            16
+
+25. Days on Waiting List
+--> Besides zero days in waiting. The most frequent waiting_day is 58 days. This shows how many days a potential guest waited before 
+it got confirmation status on the booking. The distribution of the most frequent delays is large-distributed between 38 days up to 
+220 days.
+
+SQL:
+------------------------------------------
+SELECT days_in_waiting_list, COUNT(*) AS tot_count
+FROM hotel_bookings.hotel_bookings
+WHERE days_in_waiting_list > 0 AND is_canceled=0
+GROUP BY days_in_waiting_list
+ORDER BY tot_count DESC
+LIMIT 10;
+
+RESULTS:
+------------------------------------------
+days_in_waiting_list	  tot_count
+58	                       164
+87	                        76
+122	                        53
+63	                        51
+38	                        47
+176	                        39
+77	                        37
+223	                        36
+65	                        35
+48	                        33
+
+26. Customer Type
+--> 95% of all bookings corresponds to "TRANSIENT" customers. This refers to guests which booking is indepent ore related to another
+"TRANSIENT". This is common for bookings of family or friends that gathers together in the hotel but with different booking process.
+
+SQL:
+------------------------------------------
+SELECT customer_type, COUNT(*) AS tot_count, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings WHERE is_canceled=0) AS customer_share
+FROM hotel_bookings.hotel_bookings
+WHERE is_canceled=0
+GROUP BY customer_type
+ORDER BY tot_count DESC;
+
+RESULTS:
+------------------------------------------
+customer_type	    tot_count	    customer_share
+Transient	          53099	          0.7064
+Transient-Party	    18735	          0.2492
+Contract	           2814	          0.0374
+Group	                518	          0.0069
+
+27. Quick look to ADR (avg income per occupied room on a daily basis)
+--> Average income per room is 101. The maximum number is 5400, but this is probably a typo since its a unique and very alone outlier.
+
+SQL:
+------------------------------------------
+SELECT AVG(adr), MAX(adr), MIN(adr)
+FROM hotel_bookings.hotel_bookings;
+
+RESULTS:
+------------------------------------------
+AVG(adr)	  MAX(adr)	  MIN(adr)
+101.8575	    5400	        -6
+
+28. Parking Requests
+--> Only 6% of all booking requires a parking lot for a car.
+
+SQL:
+------------------------------------------
+SELECT COUNT(required_car_parking_spaces) AS Parking_Req,
+		COUNT(required_car_parking_spaces)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS share_on_tot_bookings
+FROM hotel_bookings.hotel_bookings
+WHERE required_car_parking_spaces > 0;
+
+RESULTS:
+------------------------------------------
+Parking_Req	    share_on_tot_bookings
+7416	                0.0621
+
+29. Special Requests
+--> 95% of all bookings requires 3 or less special requests. 
+
+SQL:
+------------------------------------------
+SELECT total_of_special_requests, COUNT(*) AS tot_count, 
+COUNT(*)/(SELECT COUNT(*) FROM hotel_bookings.hotel_bookings) AS _share_
+FROM hotel_bookings.hotel_bookings
+GROUP BY total_of_special_requests
+ORDER BY tot_count DESC;
+
+RESULTS:
+------------------------------------------
+total_of_special_requests	    tot_count	    _share_
+0	                              70318	      0.5890
+1	                              33223	      0.2783
+2	                              12968	      0.1086
+3	                               2497	      0.0209
+4	                                340	      0.0028
+5	                                 40	      0.0003
+
+30. Reservation Status
+--> 75k of all booking in the dataset have already check-out. 
+
+SQL:
+------------------------------------------
+SELECT reservation_status, COUNT(*) AS tot_count
+FROM hotel_bookings.hotel_bookings
+GROUP BY reservation_status ORDER BY tot_count DESC;
+
+RESULTS:
+------------------------------------------
+reservation_status	  tot_count
+Check-Out	              75166
+Canceled	              43013
+No-Show	                 1207
+
