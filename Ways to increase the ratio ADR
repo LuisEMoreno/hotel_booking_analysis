@@ -1,0 +1,384 @@
+GOAL --> Find insights to increase ADR.
+METHOD --> We order and group data together along with ADR results to identify main drivers.
+
+First. What is ADR?
+ADR is the average rental income brought in by a paid and occupied room during a specific period of time.
+
+Why is ADR important?
+ADR is an important metric for hotel management because it gauge economic profitability over a occupied room. The more profits it can get,
+the better it is for shareholders. It is very used to perform comparissons between hotels or at the same hotel over the time.
+
+How ADR performed over the time for the hotel?
+--> There are 2 SQL codes with results.
+--> The results BELOW are ordered by "descending ADR" and it shows that the average has increased through the years (from 2015 to 2017). The
+way to note this is that the strongest months by each year, August and July, have recorded a higher ADR in 2017 than in 2016, and 
+those months in 2016 has been strongest than 2015.
+--> At the second query and results set. Every month in 2017 has a higher ADR over the same month in 2016. And, every month in 2016 
+has a higher ADR over the same month in 2015.
+
+
+SQL CODE:
+----------------------------------------
+SELECT arrival_date_year, arrival_date_month, COUNT(*) AS Tot_Bookings, 
+ROUND(AVG(adr),2) AS Average_ADR, ROUND(STDDEV(adr),2) AS STD_adr, MAX(ADR) AS Maximum_Rate
+FROM hotel_bookings.hotel_bookings
+WHERE arrival_date_month = "August" OR arrival_date_month= "July"
+GROUP BY arrival_date_year, arrival_date_month 
+ORDER BY arrival_date_month DESC, arrival_date_year DESC ;
+
+RESULTS:
+----------------------------------------
+arrival_date_year	    arrival_date_month	    Tot_Bookings	    Average_ADR	    Maximum_Rate
+    2017	                  July	                5313	          143.07	          397
+    2016	                  July	                4572	          125.52	          365
+    2015	                  July	                2776	           97.92	          508
+    2017	                August	                4925	          164.31	          450
+    2016	                August	                5063	          142.91	          369
+    2015	                August	                3885	          106.07	          299
+
+SQL CODE:
+----------------------------------------
+SELECT arrival_date_year, arrival_date_month, COUNT(*) AS Tot_Bookings, 
+ROUND(AVG(adr),2) AS Average_ADR, ROUND(STDDEV(adr),2) AS STD_adr, MAX(ADR) AS Maximum_Rate
+FROM hotel_bookings.hotel_bookings
+GROUP BY arrival_date_year, arrival_date_month
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+arrival_date_year	    arrival_date_month	    Tot_Bookings	    Average_ADR	    STD_adr	    Maximum_Rate
+      2017	                August	              4925	           164.31	       60.83	        450
+      2017	                  July	              5313	           143.07	       52.35	        397
+      2016	                August	              5063	           142.91	       57.53	        369
+      2017	                  June	              5647	           125.78	       40.92	        334
+      2016	                  July	              4572	           125.52	       48.94	        365
+      2017	                   May	              6313	           119.39	       44.15	        510
+      2016	             September	              5394	           114.76	       40.64	        345
+      2017	                 April	              5661	           111.40	        40.3	        336
+      2016	                  June	              5292	           106.99	       33.74	        333
+      2015	                August	              3885	           106.07	       51.46	        299
+      2015	                  July	              2776	            97.92	       42.73	        508
+      2016	                   May	              5478	            96.41	       37.78	        296
+      2016	               October	              6203	            95.12	       37.66	        300
+      2015	             September	              5114	            94.86	       43.06	        250
+      2016	                 April	              5428	            88.93	       32.09	        265
+      2016	              December	              3860	            86.39	       44.99	        452
+      2017	                 March	              4970	            82.24	       32.18	        265
+      2016	              November	              4454	            80.76	       35.29	        260
+      2016	                 March	              4824	            79.08	       83.72	       5400
+      2015	               October	              4957	            78.94	       32.29	        290
+      2017	              February	              4177	            76.83	       32.63	        284
+      2015	              December	              2920	            74.10	       38.48	        332
+      2017	               January	              3681	            73.80	       29.22	        284
+      2016	              February	              3891	            70.11	       26.66	        230
+      2016	               January	              2248	            64.78	       26.01	        228
+      2015	              November	              2340	            60.57	       24.18	        159
+
+
+How to keep increasing the ADR?
+The performance on the ADR ratio has been on the rise. It's obvious. Great Work!
+But now... let's disclose some recommendatios made on this url that shows us ways to improve the ADR ratio.
+https://www.amadeus-hospitality.com/insight/calculate-improve-adr-6-proven-strategies-2/
+
+Strategies
+1.- Offer Packages and Promotions --> Specially during slow seasons like Winter. 
+2.- Talk about local events and promote tours --> Advertise online and add a link of the hotel.
+3.- Offer Discounts for Additional Nights --> Do this when hotel has idle capacity.
+4.- Provide complementry services --> Like transport from the airport. This will increase publicity through guests recommendations online
+                                      or in an oral way with their friends and family. 
+5.- Deliver Unique & Personalized Experience --> This could be reinforced with Special Requests and CRM Analysis.
+6.- Balance Room Blocks & Associated Rates for Group Business --> evaluate how many rooms will be allocated for groups vs transients guests.
+
+To adress the Strategies recommended to increase ADR. Let's take a deep view over some attributes in the dataset that could help identify
+ways to increase ADR.
+
+Total_Nights_Staying
+--> There are 2 codes with results. The first shows higher ADR and the second shows the lower ADR.
+--> The first result shows that nights_staying lower than 14 days gives a higher ADR. The second result shows staying_nights around 20 or 30
+days has the lower ADR (except for guests with 0 staying nights). The latter could be explanied due to promotions for guests to stay for 
+longer nights so the Hotel reduce its idle capacity in slow seasons, therefore, they offer more nights by lowering the price.
+
+SQL CODE:
+----------------------------------------
+SELECT (stays_in_weekend_nights + stays_in_week_nights) AS Total_Staying, COUNT(*) AS Frequencies,
+ AVG(adr) AS Average_ADR, ROUND(STDDEV(adr),2) AS STD_adr, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+GROUP BY Total_Staying
+HAVING Frequencies > 10
+ORDER BY Average_ADR DESC
+LIMIT 10;
+
+RESULTS:
+----------------------------------------
+Total_Staying	    Frequencies	   Average_ADR	  STD_adr	  Maximum_ADR
+      6	             3857	         119.9043	     56.53	      437
+      9	              841	         114.6587	     54.98	      322
+      8	             1161	         113.9940	     59.1	        426
+      5	             7784	         113.2459	     51.46	      402
+     13	              142	         111.9718	     64.47	      298
+     10	             1139	         108.1097	     55.49	      392
+     11	              396	         107.9874	     60.78	      319
+     12	              223	         105.3498	        53	      265
+      3	            27076	         105.1744	     42.97	      392
+      4	            17383	         105.0070	     46.17	      378
+
+
+SQL CODE:
+----------------------------------------
+SELECT (stays_in_weekend_nights + stays_in_week_nights) AS Total_Staying, COUNT(*) AS Frequencies,
+ AVG(adr) AS Average_ADR, ROUND(STDDEV(adr),2) AS STD_adr, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+GROUP BY Total_Staying
+HAVING Frequencies > 10
+ORDER BY Average_ADR
+LIMIT 10;
+
+RESULTS:
+----------------------------------------
+Total_Staying	    Frequencies	    Average_ADR	    STD_adr	    Maximum_ADR
+       0	            715	          0.0000	        0	            0
+      28	             35	          58.1143	      26.39	         148
+      25	             37	          58.8649	       7.07	          86
+      22	             14	          75.5000	      33.15	         143
+      20	             14	          76.2857	      28.54	         145
+      30	             13	          76.4615	      38.44	         140
+      21	             71	          78.0423	      30.07	         232
+      18	             35	          78.9143	      43.43	         204
+      29	             14	          88.6429	      56.54	         212
+      15	             75	          91.5600	      44.15	         208
+
+
+Children & Babies
+--> The first set of SQL CODE and RESULTS is about the quantity of Children. The second set of SQL CODE and RESULTS is about the quantity
+of Babies.
+--> Both Results clearly shows that the more Children and Babies are as guests, the more ADR is earned by the hotel. Children and Babies
+are important drivers. 
+
+SQL CODE:
+----------------------------------------
+SELECT children, COUNT(*), ROUND(AVG(adr),2) AS Average_ADR, ROUND(STDDEV(adr),2) AS STD_adr,
+MAX(ADR) AS Maximum_Rate
+FROM hotel_bookings.hotel_bookings
+WHERE ADR <> 5400
+GROUP BY children
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+children	  COUNT(*)	  Average_ADR	  Maximum_Rate
+3	            76	        199.34	        353
+2	           3652	        179.31	        452
+1	           4861	        141.57	        402
+10	          1	          133.00	        133
+0	          110795	      97.45	          510
+
+SQL CODE:
+----------------------------------------
+SELECT babies, COUNT(*), ROUND(AVG(adr),2) AS Average_ADR, MAX(ADR) AS Maximum_Rate
+FROM hotel_bookings.hotel_bookings
+WHERE ADR <> 5400
+GROUP BY babies
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+babies	  COUNT(*)	  Average_ADR	  Maximum_Rate
+2	          15	        159.40	        248
+1	         900	        119.27	        329
+0	      118468	        101.67	        510
+9	           1	         95.00	         95
+10	         1	         84.00	         84
+
+Meals
+--> Although booking with HB/FB meal is better. Having Meals or No Meals, it slightly affects ADR.  
+
+SQL CODE:
+----------------------------------------
+SELECT meal, COUNT(*) AS tot_meal, ROUND(AVG(adr),2) AS Average_adr, ROUND(STDDEV(adr),2) AS STD_adr, 
+MAX(adr) AS Maximum_adr
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY meal
+ORDER BY Average_adr DESC;
+
+RESULTS:
+----------------------------------------
+meal	        tot_meal	  Average_adr	  STD_adr	  Maximum_adr
+HB	            14463	      120.35	      58.4	      402
+FB	              798	      109.07	      65.1	      437
+BB	            92305	      99.37	        47.2	      510
+SC	            10650	      98.33	       29.35	      218
+Undefined	        1169	    91.95	       54.78	      426
+
+Countries
+--> There's no direct effect on ADR in relation to the country. Except that guests from Portugal, where the hotels are based, have lower
+rates.
+
+SQL CODE:
+----------------------------------------
+SELECT country, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY country
+HAVING COUNT(*) > 500
+ORDER BY Tot_Count DESC, Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+country	    Tot_Count	    Average_ADR	    Deviation_ADR	    Maximum_ADR
+  PRT	        48585	         91.96	          48	              508
+  GBR	        12129	         96.06	        46.25	              382
+  FRA	        10415	        109.64	        43.33	              378
+  ESP	         8568	        117.02	        58.82	              402
+  DEU	         7287	        104.42	        36.54	              307
+  ITA	         3766	        113.99	        42.06	              510
+  IRL	         3375	         98.21	        45.99	              335
+  BEL	         2342	        113.87	        42.25	              373
+  BRA	         2224	        111.02	        44.23	              311
+  NLD	         2104	        108.11	        43.19	              352
+  USA	         2097	        123.01	        51.61	              328
+  CHE	         1730	        121.85	        48.23	              335
+  CN	         1279	        108.73	        47.87	              360
+  AUT	         1263	        106.26	        37.74	              239
+  SWE	         1024	        112.93	        45.45	              307
+  CHN	          999	        110.53	        40.64	              315
+  POL	          919	        107.13	        45.07	              311
+  ISR	          669	        110.75	        39.57	              290
+  RUS	          632	        118.72	        50.25	              292
+  NOR	          607	        121.65	        44.78	              327
+
+Distribution Channel
+--> Direct and TA/TO distribution channel builds more ADR than Corporate Channel. This may be cause due to Corporate agreements on
+better prices.
+
+SQL CODE:
+----------------------------------------
+SELECT distribution_channel, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY distribution_channel
+HAVING COUNT(*) > 500
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+distribution_channel	  Tot_Count	    Average_ADR	    Deviation_ADR	    Maximum_ADR
+      Direct	            14645	        106.68	          61.88	            452
+      TA/TO	              97869	        103.26	          45.8	            510
+    Corporate	             6677	         69.34	          33.44	            508
+
+Repeated Guests
+--> Repeated Guests has in average of $43.00 on ADR fewer than new guests. 
+
+SQL CODE:
+----------------------------------------
+SELECT is_repeated_guest, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400 AND (arrival_date_month = "July" OR arrival_date_month="August")
+GROUP BY is_repeated_guest
+ORDER BY is_repeated_guest DESC;
+
+RESULTS:
+----------------------------------------
+is_repeated_guest	  Tot_Count	  Average_ADR	  Deviation_ADR	  Maximum_ADR
+        1	             524	      91.91	          69.07	          508
+        0	            26010	     134.66	          57.08	          450
+
+Assigned Room
+--> The rooms with higher average ADR are room type H, G and F. Since these are the most expensive and exclusive, the quantity of booking
+on this rooms has a notable limit. Instead the rooms more booked are type A and D, which has a regular ADR.
+
+SQL CODE:
+----------------------------------------
+SELECT assigned_room_type, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY assigned_room_type
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+assigned_room_type	  Tot_Count	  Average_ADR	  Deviation_ADR	  Maximum_ADR
+        H	               712	      171.41	        82.5	          437
+        G	              2553	      166.55	        79.62	          510
+        F	              3751	      151.91	        67.02	          392
+        E	              7806	      117.73	        58.54	          452
+        C	              2375	      113.45	        68.45	          508
+        D	             25322	      107.48	        49.8	          376
+        B	              2159	       94.63	        37.69	          284
+        A	             74052	       93.09	        36.4	          450
+        K	               279	       53.69	        60.81	          283
+        I	               363	       40.86	        65.27	          310
+        L	                 1	        8.00	          0	              8
+        P	                12	        0.00	          0	              0
+
+Customer Type
+--> Transient Customer brings the higher ADR to the hotel, rather than in a Contract or Group-related. 
+
+SQL CODE:
+----------------------------------------
+SELECT customer_type, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY customer_type
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+customer_type	    Tot_Count	    Average_ADR	    Deviation_ADR	    Maximum_ADR
+Transient	          89612	        106.97	          50.33	            510
+Contract	           4076	         87.59	          33.69	            250
+Transient-Party	    25120	         86.13	          36.89	            452
+Group	                577	         83.51	          50.23	            318
+
+Total Of Special Requests
+--> The trend follows a clear path. The more special requests there are, the higher the ADR. Altough, the step-by-step increase 
+is slightly.
+
+SQL CODE:
+----------------------------------------
+SELECT total_of_special_requests, COUNT(*) AS Tot_Count, ROUND(AVG(adr),2) AS Average_ADR, 
+ROUND(STDDEV(adr),2) AS Deviation_ADR, MAX(adr) AS Maximum_ADR
+FROM hotel_bookings.hotel_bookings
+WHERE adr <> 5400
+GROUP BY total_of_special_requests
+ORDER BY Average_ADR DESC;
+
+RESULTS:
+----------------------------------------
+total_of_special_requests	    Tot_Count	    Average_ADR	    Deviation_ADR	    Maximum_ADR
+          4	                     340	         130.61	          68.75	            452
+          5	                      40	         127.83	          57.98	            315
+          3	                    2497	         123.88	          55.62	            387
+          2	                   12968	         117.07	          52.03	            426
+          1	                   33223	         108.48	          48.99	            402
+          0	                   70317	          94.91	          45.13	            510
+
+
+CONCLUSIONS ON THE DRIVERS
+--> The best guest to pull up the ADR is a new customer who is bringing children or babies, who has booked room type H,G,F directly or 
+by "TA/TO" in order to stay for less than 2-week in the hotel with some meal arrangement and has asked for more than one special request.
+--> Surely, this kind of guest is not typically normal for the hotel management. So, in order to bring someone alike, there are some 
+commercial and marketing strategies to perform:
+
+            -- Give small discounts to new guests who are willing to bring their children. Maybe discounts on the meal, or better
+                yet, install a special room for taking care on children and hire someone who can take care of them while parents go out and
+                discover the surroundings. This can encourage family travel.
+            -- In relation to the first option. Invest more in online advertising for people who is outside Portugal, and give a better deal
+                to TA/TO when they are dealing with family packages so they can recommend the hotels and talk about how they can fit to 
+                their family vacation plan.
+            -- Personalize the service for guests. Create an extensive catalogue of special requests that could rise the price on the room 
+                and that it could be easily sold to the guest. 
+            -- In slow seasons, it could be worth to offer an upgrade of rooms type A and D in order for the guest to take room type H, G
+                or F. Give some small discounts on the price. And only do this when there's going to be idle capacity on these rooms. 
+                This suggestion could decrease ADR ratio on room H, G or F but, overall, it will increase income for the hotel.
+            -- Also in slow seasons, if guests are only staying for 2 nights or 3, offer them a package for more nights with a relative 
+                discount on the price.
+            -- In order to improve the influence of meals in ADR. The hotel can prepare 1 or more theme restaurants which dishes and 
+                services are not included when booking, but instead, they are optional to ask for a table and pay the full price of the 
+                dishes in the menu. This will definitively will increase income, specially in higher demand seasons.
