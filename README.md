@@ -1,5 +1,3 @@
-# hotel_booking_analysis
-
 Welcome!
 
 My name is Luis Moreno. Im a Management career bachelor degree with an entusiastic learning side into technologies that is set to change
@@ -13,11 +11,13 @@ project.
 The dataset im working on is hotel_bookings.csv. This file has been used for many other analysts. The data comes from this link
 https://github.com/rfordatascience/tidytuesday/tree/master/data
 
-General_View is a broad and general analysis on the dataset. There are 30 queries and each one consists on a general description of the query made, the code of the query and the results it gave me.
+General_View is a broad and general analysis on the dataset. There are 30 queries and each one consists on a general description of the query made, 
+the code of the query and the results it gave me.
 
-Ways to increase the average ADR is a more in-depth analysis of the attributes that affects more the average ADR. This report also has a small recommendation taken from the website
-which is specified in the report and for every attritube analyzed, there is a minimum of 1 query and 1 result (some has 2 or 3). This analysis is being made through MYSQL.
+Ways to increase the average ADR is a more in-depth analysis of the attributes that affects more the average ADR. This report also has a small 
+recommendation taken from the website which is specified in the report and for every attritube analyzed, there is a minimum of 1 query and 1 
+result (some has 2 or 3). This analysis is being made through MYSQL.
 
-Data Analysis Report is a more complete analysis report of specific attributes that affects average ADR. It involves charts and graphics that explain visually how the ADR behaves under
-different circunstances on the same factors. This is more descriptive analytical report and the scope is to define short conclusions over the attributes. I've made this analysis report
-using TABLEAU for the charts and graphics.
+Data Analysis Report is a more complete analysis report of specific attributes that affects average ADR. It involves charts and graphics that visually
+explains how the ADR behaves under different circunstances on the same factors. This is more descriptive analytical report and the scope is to define 
+short conclusions over the attributes. I've made this analysis report using TABLEAU for the charts and graphics.
